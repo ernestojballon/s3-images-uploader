@@ -1,0 +1,38 @@
+# Use root/example as user/password credentials
+version: '3.1'
+
+services:
+  db:
+    image: mysql:latest
+    command: --default-authentication-plugin=mysql_native_password
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: password
+    ports:
+      - 3306:3306
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      
+  react-app:
+    build: ./react/
+    environment:
+      - ENVIRONMENT=docker
+    ports:
+      - "3000:3000"
+
+  server:
+    build: ./express/
+    depends_on:
+      db:
+        condition: service_healthy 
+    command: /bin/sh -c "npx prisma migrate dev && npm run dev"
+    environment:
+      - DATABASE_URL=${DATABASE_URL}
+      - AWS_BUCKET_REGION=${AWS_BUCKET_REGION}
+      - AWS_BUCKET_NAME=${AWS_BUCKET_NAME}
+      - AWS_ACCESS_KEY=${AWS_ACCESS_KEY}
+      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
+    
